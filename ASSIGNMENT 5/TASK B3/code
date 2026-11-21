@@ -1,0 +1,227 @@
+#include <stdio.h>
+#include <limits.h>
+
+#define V 8
+#define INF 999999
+
+int g[V][V] = {
+    {0,4,2,0,0,0,0,0},
+    {4,0,1,5,0,0,0,0},
+    {2,1,0,8,10,0,0,0},
+    {0,5,8,0,2,6,0,0},
+    {0,0,10,2,0,3,5,0},
+    {0,0,0,6,3,0,1,7},
+    {0,0,0,0,5,1,0,2},
+    {0,0,0,0,0,7,2,0}
+};
+
+void array_dijkstra(void)
+{
+    int d[V], used[V] = {0};
+
+    for (int i = 0; i < V; i++)
+        d[i] = INF;
+
+    d[0] = 0;
+
+    for (int k = 0; k < V; k++) {
+        int u = -1;
+
+        for (int i = 0; i < V; i++)
+            if (!used[i] && (u == -1 || d[i] < d[u]))
+                u = i;
+
+        if (u == -1 || d[u] == INF)
+            break;
+
+        used[u] = 1;
+
+        for (int v = 0; v < V; v++)
+            if (g[u][v] && d[u] + g[u][v] < d[v])
+                d[v] = d[u] + g[u][v];
+    }
+
+    printf("Array Dijkstra: ");
+    for (int i = 0; i < V; i++)
+        printf("%d ", d[i]);
+    printf("\n");
+}
+
+void heap_dijkstra(void)
+{
+    int d[V], used[V] = {0};
+
+    /* A simple binary min-heap of (distance, vertex). */
+    struct Node { int dist, vertex; };
+    struct Node h[256];
+    int size = 0;
+
+    for (int i = 0; i < V; i++)
+        d[i] = INF;
+
+    d[0] = 0;
+    h[size++] = (struct Node){0, 0};
+
+    while (size > 0) {
+        struct Node current = h[0];
+        h[0] = h[--size];
+
+        int i = 0;
+        while (1) {
+            int left = 2 * i + 1, right = left + 1, small = i;
+
+            if (left < size && h[left].dist < h[small].dist)
+                small = left;
+            if (right < size && h[right].dist < h[small].dist)
+                small = right;
+            if (small == i)
+                break;
+
+            struct Node temp = h[i];
+            h[i] = h[small];
+            h[small] = temp;
+            i = small;
+        }
+
+        int u = current.vertex;
+
+        if (used[u] || current.dist != d[u])
+            continue;
+
+        used[u] = 1;
+
+        for (int v = 0; v < V; v++) {
+            if (g[u][v] && d[u] + g[u][v] < d[v]) {
+                d[v] = d[u] + g[u][v];
+
+                if (size < 256) {
+                    int p = size++;
+                    h[p] = (struct Node){d[v], v};
+
+                    while (p > 0) {
+                        int parent = (p - 1) / 2;
+                        if (h[parent].dist <= h[p].dist)
+                            break;
+
+                        struct Node temp = h[p];
+                        h[p] = h[parent];
+                        h[parent] = temp;
+                        p = parent;
+                    }
+                }
+            }
+        }
+    }
+
+    printf("Heap Dijkstra:  ");
+    for (int i = 0; i < V; i++)
+        printf("%d ", d[i]);
+    printf("\n");
+}
+
+void floyd_warshall(void)
+{
+    int d[V][V];
+
+    for (int i = 0; i < V; i++)
+        for (int j = 0; j < V; j++)
+            d[i][j] = (i == j) ? 0 :
+                      (g[i][j] ? g[i][j] : INF);
+
+    for (int k = 0; k < V; k++)
+        for (int i = 0; i < V; i++)
+            for (int j = 0; j < V; j++)
+                if (d[i][k] != INF && d[k][j] != INF &&
+                    d[i][k] + d[k][j] < d[i][j])
+                    d[i][j] = d[i][k] + d[k][j];
+
+    printf("Floyd-Warshall from 0: ");
+    for (int j = 0; j < V; j++)
+        printf("%d ", d[0][j]);
+    printf("\n");
+}
+
+#define N 5
+
+int grid[N][N] = {
+    {0,0,0,0,0},
+    {0,1,1,1,0},
+    {0,0,0,1,0},
+    {0,1,0,0,0},
+    {0,0,0,0,0}
+};
+
+int heuristic(int x, int y)
+{
+    int dx = x - 4;
+    int dy = y - 4;
+
+    if (dx < 0) dx = -dx;
+    if (dy < 0) dy = -dy;
+
+    return dx + dy;
+}
+
+void astar(void)
+{
+    int visited[N][N] = {0};
+    int dist[N][N];
+
+    for (int i = 0; i < N; i++)
+        for (int j = 0; j < N; j++)
+            dist[i][j] = INF;
+
+    dist[0][0] = 0;
+    int explored = 0;
+    int dx[] = {-1, 1, 0, 0};
+    int dy[] = {0, 0, -1, 1};
+
+    while (1) {
+        int x = -1, y = -1, best = INF;
+
+        for (int i = 0; i < N; i++)
+            for (int j = 0; j < N; j++)
+                if (!visited[i][j] && dist[i][j] != INF &&
+                    dist[i][j] + heuristic(i, j) < best) {
+                    best = dist[i][j] + heuristic(i, j);
+                    x = i;
+                    y = j;
+                }
+
+        if (x == -1)
+            break;
+
+        if (x == 4 && y == 4)
+            break;
+
+        visited[x][y] = 1;
+        explored++;
+
+        for (int k = 0; k < 4; k++) {
+            int nx = x + dx[k], ny = y + dy[k];
+
+            if (nx >= 0 && nx < N && ny >= 0 && ny < N &&
+                !grid[nx][ny] && !visited[nx][ny] &&
+                dist[x][y] + 1 < dist[nx][ny])
+                dist[nx][ny] = dist[x][y] + 1;
+        }
+    }
+
+    printf("A* explored cells: %d\n", explored);
+    printf("A* path length: ");
+
+    if (dist[4][4] == INF)
+        printf("No path\n");
+    else
+        printf("%d\n", dist[4][4]);
+}
+
+int main(void)
+{
+    array_dijkstra();
+    heap_dijkstra();
+    floyd_warshall();
+    astar();
+
+    return 0;
+}
