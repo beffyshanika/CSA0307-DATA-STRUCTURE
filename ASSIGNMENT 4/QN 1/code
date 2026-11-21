@@ -1,0 +1,67 @@
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+
+#define N 100000
+#define M 100003
+
+unsigned poor_hash(const char *s) {
+    return (s[0] + s[1]) % M;
+}
+
+unsigned polynomial_hash(const char *s) {
+    unsigned h = 0;
+    while (*s)
+        h = h * 31 + (unsigned char)*s++;
+    return h % M;
+}
+
+unsigned fnv_hash(const char *s) {
+    uint32_t h = 2166136261u;
+    while (*s) {
+        h ^= (unsigned char)*s++;
+        h *= 16777619u;
+    }
+    return h % M;
+}
+
+void measure(unsigned (*hash)(const char *), char regs[N][16],
+             const char *name) {
+    int *count = calloc(M, sizeof(int));
+    int max = 0, used = 0;
+
+    for (int i = 0; i < N; i++) {
+        unsigned b = hash(regs[i]);
+        count[b]++;
+        if (count[b] > max)
+            max = count[b];
+    }
+
+    for (int i = 0; i < M; i++)
+        if (count[i] > 0)
+            used++;
+
+    printf("\n%s\n", name);
+    printf("Longest chain: %d\n", max);
+    printf("Average chain length (non-empty buckets): %.2f\n",
+           used ? (double)N / used : 0);
+
+    free(count);
+}
+
+int main(void) {
+    char regs[N][16];
+
+    for (int i = 0; i < N; i++) {
+        sprintf(regs[i], "TN%02dAB%04d",
+                (i / 10000) % 100, i % 10000);
+    }
+
+    measure(poor_hash, regs, "Poor hash");
+    measure(polynomial_hash, regs, "Polynomial hash");
+    measure(fnv_hash, regs, "FNV-1a hash");
+
+    return 0;
+}
