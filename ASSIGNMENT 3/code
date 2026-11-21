@@ -1,0 +1,190 @@
+#include <stdio.h>
+
+#include <stdlib.h>
+
+ 
+
+typedef struct Node {
+
+    int key;
+
+    struct Node *left, *right;
+
+} Node;
+
+ 
+
+Node *newNode(int key) {
+
+    Node *n = (Node *)malloc(sizeof(Node));
+
+    if (!n) { printf("Memory allocation failed\n"); exit(1); }
+
+    n->key = key;
+
+    n->left = n->right = NULL;
+
+    return n;
+
+}
+
+ 
+
+Node *insert(Node *root, int key) {
+
+    if (root == NULL) return newNode(key);
+
+    if (key < root->key) root->left = insert(root->left, key);
+
+    else if (key > root->key) root->right = insert(root->right, key);
+
+    return root;                 /* duplicate keys ignored */
+
+}
+
+ 
+
+Node *search(Node *root, int key) {
+
+    if (!root || root->key == key) return root;
+
+    return key < root->key ? search(root->left, key) : search(root->right, key);
+
+}
+
+ 
+
+void preorder(Node *r) {
+
+    if (r) { printf("%d ", r->key); preorder(r->left); preorder(r->right); }
+
+}
+
+void inorder(Node *r) {
+
+    if (r) { inorder(r->left); printf("%d ", r->key); inorder(r->right); }
+
+}
+
+void postorder(Node *r) {
+
+    if (r) { postorder(r->left); postorder(r->right); printf("%d ", r->key); }
+
+}
+
+ 
+
+int height(Node *r) {
+
+    if (!r) return -1;           /* height measured in edges */
+
+    int lh = height(r->left), rh = height(r->right);
+
+    return 1 + (lh > rh ? lh : rh);
+
+}
+
+ 
+
+Node *minimum(Node *r) {
+
+    while (r && r->left) r = r->left;
+
+    return r;
+
+}
+
+ 
+
+Node *deleteNode(Node *r, int key) {
+
+    if (!r) return NULL;
+
+    if (key < r->key) r->left = deleteNode(r->left, key);
+
+    else if (key > r->key) r->right = deleteNode(r->right, key);
+
+    else {
+
+        if (!r->left) {
+
+            Node *t = r->right; free(r); return t;
+
+        }
+
+        if (!r->right) {
+
+            Node *t = r->left; free(r); return t;
+
+        }
+
+        Node *s = minimum(r->right);
+
+        r->key = s->key;
+
+        r->right = deleteNode(r->right, s->key);
+
+    }
+
+    return r;
+
+}
+
+ 
+
+void freeTree(Node *r) {
+
+    if (r) { freeTree(r->left); freeTree(r->right); free(r); }
+
+}
+
+ 
+
+int main(void) {
+
+    Node *root = NULL;
+
+    int values[] = {50, 30, 70, 20, 40, 60, 80, 65};
+
+    int n = sizeof(values) / sizeof(values[0]);
+
+ 
+
+    for (int i = 0; i < n; i++) root = insert(root, values[i]);
+
+ 
+
+    printf("Inorder: "); inorder(root);
+
+    printf("\\nPreorder: "); preorder(root);
+
+    printf("\\nPostorder: "); postorder(root);
+
+    printf("\\nHeight: %d\\n", height(root));
+
+ 
+
+    printf("Search 40: %s\\n", search(root, 40) ? "Found" : "Not found");
+
+ 
+
+    root = deleteNode(root, 20);
+
+    root = deleteNode(root, 30);
+
+    root = deleteNode(root, 50);
+
+    printf("Preorder after deleting 20, 30, 50: ");
+
+    preorder(root);
+
+    printf("\\n");
+
+ 
+
+    freeTree(root);
+
+    return 0;
+
+}
+
