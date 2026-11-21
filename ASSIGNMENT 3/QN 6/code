@@ -1,0 +1,167 @@
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define SIZE 26
+
+typedef struct Trie {
+    struct Trie *child[SIZE];
+    int end;
+    int words;
+} Trie;
+
+Trie *node() {
+    Trie *t = (Trie *)calloc(1, sizeof(Trie));
+    return t;
+}
+
+// Insert a word
+void insert(Trie *t, const char *w) {
+    for (int i = 0; w[i] != '\0'; i++) {
+        int k = w[i] - 'a';
+
+        if (k < 0 || k >= 26)
+            return;
+
+        if (t->child[k] == NULL)
+            t->child[k] = node();
+
+        t = t->child[k];
+        t->words++;
+    }
+
+    t->end = 1;
+}
+
+// Search for a complete word
+int search(Trie *t, const char *w) {
+    for (int i = 0; w[i] != '\0'; i++) {
+        int k = w[i] - 'a';
+
+        if (k < 0 || k >= 26 || t->child[k] == NULL)
+            return 0;
+
+        t = t->child[k];
+    }
+
+    return t->end;
+}
+
+// Count words having a given prefix
+int count_prefix(const Trie *t, const char *p) {
+    for (int i = 0; p[i] != '\0'; i++) {
+        int k = p[i] - 'a';
+
+        if (k < 0 || k >= 26 || t->child[k] == NULL)
+            return 0;
+
+        t = t->child[k];
+    }
+
+    return t->words;
+}
+
+// Autocomplete helper
+void display(Trie *t, char word[], int level) {
+    if (t->end) {
+        word[level] = '\0';
+        printf("%s\n", word);
+    }
+
+    for (int i = 0; i < SIZE; i++) {
+        if (t->child[i] != NULL) {
+            word[level] = 'a' + i;
+            display(t->child[i], word, level + 1);
+        }
+    }
+}
+
+// Autocomplete
+void autocomplete(Trie *t, const char *prefix) {
+    char word[100];
+    int level = 0;
+
+    for (int i = 0; prefix[i] != '\0'; i++) {
+        int k = prefix[i] - 'a';
+
+        if (k < 0 || k >= 26 || t->child[k] == NULL) {
+            printf("No suggestions found.\n");
+            return;
+        }
+
+        word[level++] = prefix[i];
+        t = t->child[k];
+    }
+
+    display(t, word, level);
+}
+
+// Delete helper
+int delete_word(Trie *t, const char *w, int depth) {
+    if (w[depth] == '\0') {
+        if (!t->end)
+            return 0;
+
+        t->end = 0;
+        return 1;
+    }
+
+    int k = w[depth] - 'a';
+
+    if (k < 0 || k >= 26 || t->child[k] == NULL)
+        return 0;
+
+    if (delete_word(t->child[k], w, depth + 1))
+        t->child[k]->words--;
+
+    Trie *c = t->child[k];
+
+    if (c->words == 0 && !c->end) {
+        free(c);
+        t->child[k] = NULL;
+    }
+
+    return 1;
+}
+
+int main() {
+    Trie *root = node();
+
+    char *contacts[] = {
+        "anand", "anitha", "anu",
+        "arun", "bala", "anusuya"
+    };
+
+    int n = 6;
+
+    for (int i = 0; i < n; i++)
+        insert(root, contacts[i]);
+
+    printf("Search for anu: ");
+    if (search(root, "anu"))
+        printf("Found\n");
+    else
+        printf("Not Found\n");
+
+    printf("\nPrefix counts:\n");
+    printf("a: %d\n", count_prefix(root, "a"));
+    printf("an: %d\n", count_prefix(root, "an"));
+    printf("anu: %d\n", count_prefix(root, "anu"));
+    printf("b: %d\n", count_prefix(root, "b"));
+    printf("z: %d\n", count_prefix(root, "z"));
+
+    printf("\nAutocomplete for prefix 'an':\n");
+    autocomplete(root, "an");
+
+    printf("\nDeleting anu...\n");
+    delete_word(root, "anu", 0);
+
+    printf("Search for anu after deletion: ");
+    if (search(root, "anu"))
+        printf("Found\n");
+    else
+        printf("Not Found\n");
+
+    return 0;
+}
