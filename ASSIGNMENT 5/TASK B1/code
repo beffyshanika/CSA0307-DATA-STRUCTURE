@@ -1,0 +1,80 @@
+#include <stdio.h>
+
+#define V 7
+
+const char *name[V] = {
+    "Airport", "Guindy", "Saidapet", "Central",
+    "Egmore", "Vadapalani", "Koyambedu"
+};
+
+int start[V + 1] = {0, 1, 4, 6, 8, 10, 12, 14};
+
+int adj[14] = {
+    1, 0, 2, 5, 1, 3, 2, 4, 3, 6, 1, 6, 4, 5
+};
+
+int visited[V];
+
+void DFS(int u)
+{
+    visited[u] = 1;
+    printf("%s ", name[u]);
+
+    for (int i = start[u]; i < start[u + 1]; i++) {
+        int v = adj[i];
+
+        if (!visited[v])
+            DFS(v);
+    }
+}
+
+void BFS(int source)
+{
+    int queue[V], front = 0, rear = 0;
+    int dist[V], parent[V];
+
+    for (int i = 0; i < V; i++) {
+        dist[i] = -1;
+        parent[i] = -1;
+    }
+
+    dist[source] = 0;
+    queue[rear++] = source;
+
+    while (front < rear) {
+        int u = queue[front++];
+        printf("%s ", name[u]);
+
+        for (int i = start[u]; i < start[u + 1]; i++) {
+            int v = adj[i];
+
+            if (dist[v] == -1) {
+                dist[v] = dist[u] + 1;
+                parent[v] = u;
+                queue[rear++] = v;
+            }
+        }
+    }
+
+    printf("\nKoyambedu is %d stops away via:",
+           dist[6]);
+
+    for (int v = 6; v != -1; v = parent[v])
+        printf(" %s", name[v]);
+
+    printf("\n");
+}
+
+int main(void)
+{
+    printf("DFS: ");
+    DFS(0);
+
+    for (int i = 0; i < V; i++)
+        visited[i] = 0;
+
+    printf("\nBFS: ");
+    BFS(0);
+
+    return 0;
+}
