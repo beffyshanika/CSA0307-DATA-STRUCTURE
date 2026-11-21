@@ -1,0 +1,55 @@
+#include <stdio.h>
+#include <limits.h>
+
+#define V 20
+
+int cost[V][V];
+
+void prim(void)
+{
+    int key[V], parent[V], inMST[V] = {0};
+    int total = 0;
+
+    for (int i = 0; i < V; i++) {
+        key[i] = INT_MAX;
+        parent[i] = -1;
+    }
+
+    key[0] = 0;
+
+    for (int count = 0; count < V; count++) {
+        int u = -1;
+
+        for (int v = 0; v < V; v++) {
+            if (!inMST[v] &&
+                (u == -1 || key[v] < key[u]))
+                u = v;
+        }
+
+        if (u == -1 || key[u] == INT_MAX) {
+            printf("All hubs cannot be connected.\n");
+            return;
+        }
+
+        inMST[u] = 1;
+        total += key[u];
+
+        for (int v = 0; v < V; v++) {
+            if (cost[u][v] > 0 && !inMST[v] &&
+                cost[u][v] < key[v]) {
+                key[v] = cost[u][v];
+                parent[v] = u;
+            }
+        }
+    }
+
+    printf("\nCable connection plan:\n");
+
+    for (int i = 1; i < V; i++)
+        printf("Hub %d - Hub %d : Cost %d\n",
+               parent[i], i, cost[parent[i]][i]);
+
+    printf("Total cable cost = %d\n", total);
+}
+
+}
