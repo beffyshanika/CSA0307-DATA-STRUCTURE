@@ -1,0 +1,273 @@
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define TABLE_SIZE 200003
+#define MAX_ORDERS 100000
+
+typedef struct Order {
+    int id;
+    char restaurant[30];
+    int amount;
+    int delay;
+    int cancelled;
+    int sequence;
+    struct Order *next;
+} Order;
+
+Order *table[TABLE_SIZE];
+Order *heap[MAX_ORDERS];
+
+int heapSize = 0;
+int sequenceNumber = 0;
+
+unsigned hash(int id) {
+    return (unsigned)id % TABLE_SIZE;
+}
+
+void swap(Order **a, Order **b) {
+    Order *t = *a;
+    *a = *b;
+    *b = t;
+}
+
+// Higher delay comes first.
+// Equal delays are ordered by arrival sequence.
+int higher(Order *a, Order *b) {
+    if (a->delay != b->delay)
+        return a->delay > b->delay;
+
+    return a->sequence < b->sequence;
+}
+
+void insert_hash(Order *o) {
+    unsigned b = hash(o->id);
+
+    o->next = table[b];
+    table[b] = o;
+}
+
+Order *find_order(int id) {
+    unsigned b = hash(id);
+
+    Order *p = table[b];
+
+    while (p != NULL) {
+        if (p->id == id)
+            return p;
+
+        p = p->next;
+    }
+
+    return NULL;
+}
+
+// Insert into maximum heap
+void heap_push(Order *o) {
+    if (heapSize >= MAX_ORDERS)
+        return;
+
+    int i = heapSize++;
+    heap[i] = o;
+
+    while (i > 0) {
+        int parent = (i - 1) / 2;
+
+        if (!higher(heap[i], heap[parent]))
+            break;
+
+        swap(&heap[i], &heap[parent]);
+        i = parent;
+    }
+}
+
+// Remove the highest-priority order
+Order *heap_pop(void) {
+    if (heapSize == 0)
+        return NULL;
+
+    Order *top = heap[0];
+
+    heap[0] = heap[--heapSize];
+
+    int i = 0;
+
+    while (1) {
+        int left = 2 * i + 1;
+        int right = 2 * i + 2;
+        int best = i;
+
+        if (left < heapSize &&
+            higher(heap[left], heap[best]))
+            best = left;
+
+        if (right < heapSize &&
+            higher(heap[right], heap[best]))
+            best = right;
+
+        if (best == i)
+            break;
+
+        swap(&heap[i], &heap[best]);
+        i = best;
+    }
+
+    return top;
+}
+
+// Place a new order
+void place_order(int id, const char *restaurant,
+                 int amount, int delay) {
+    if (find_order(id) != NULL)
+        return;
+
+    Order *o = calloc(1, sizeof(Order));
+
+    if (o == NULL)
+        return;
+
+    o->id = id;
+    strcpy(o->restaurant, restaurant);
+    o->amount = amount;
+    o->delay = delay;
+    o->sequence = sequenceNumber++;
+
+    insert_hash(o);
+    heap_push(o);
+}
+
+// Cancel an order
+void cancel_order(int id) {
+    Order *o = find_order(id);
+
+    if (o != NULL)
+        o->cancelled = 1;
+}
+
+// Assign the next rider
+void assign_order(void) {
+    while (heapSize > 0) {
+        Order *o = heap_pop();
+
+        if (o->cancelled)
+            continue;
+
+        printf("Assigned order: %d, Restaurant: %s\n",
+               o->id, o->restaurant);
+
+        o->cancelled = 1;
+        return;
+    }
+
+    printf("No pending orders\n");
+}
+
+// Compare report records
+int before(Order *a, Order *b) {
+    int c = strcmp(a->restaurant, b->restaurant);
+
+    if (c != 0)
+        return c < 0;
+
+    return a->amount <= b->amount;
+}
+
+// Merge sort for hourly report
+void merge(Order *a[], Order *temp[],
+           int left, int mid, int right) {
+    int i = left;
+    int j = mid + 1;
+    int k = left;
+
+    while (i <= mid && j <= right) {
+        if (before(a[i], a[j]))
+            temp[k++] = a[i++];
+        else
+            temp[k++] = a[j++];
+    }
+
+    while (i <= mid)
+        temp[k++] = a[i++];
+
+    while (j <= right)
+        temp[k++] = a[j++];
+
+    for (i = left; i <= right; i++)
+        a[i] = temp[i];
+}
+
+void merge_sort(Order *a[], Order *temp[],
+                int left, int right) {
+    if (left >= right)
+        return;
+
+    int mid = left + (right - left) / 2;
+
+    merge_sort(a, temp, left, mid);
+    merge_sort(a, temp, mid + 1, right);
+
+    merge(a, temp, left, mid, right);
+}
+
+// Generate hourly report
+void report(void) {
+    Order *a[MAX_ORDERS];
+    Order *temp[MAX_ORDERS];
+
+    int n = 0;
+
+    for (int b = 0; b < TABLE_SIZE; b++) {
+        for (Order *p = table[b]; p; p = p->next) {
+            if (!p->cancelled)
+                a[n++] = p;
+        }
+    }
+
+    if (n > 1)
+        merge_sort(a, temp, 0, n - 1);
+
+    printf("\nHourly Order Report\n");
+
+    for (int i = 0; i < n; i++) {
+        printf("ID: %d Restaurant: %s Amount: %d\n",
+               a[i]->id, a[i]->restaurant, a[i]->amount);
+    }
+}
+
+int main(void) {
+    place_order(101, "PizzaHouse", 450, 15);
+    place_order(102, "BurgerPoint", 250, 30);
+    place_order(103, "PizzaHouse", 300, 45);
+    place_order(104, "FoodCorner", 200, 10);
+    place_order(105, "BurgerPoint", 400, 25);
+
+    printf("Searching order 103:\n");
+
+    Order *o = find_order(103);
+
+    if (o != NULL)
+        printf("Order found: %d\n", o->id);
+    else
+        printf("Order not found\n");
+
+    cancel_order(102);
+
+    printf("\nAssigning rider:\n");
+    assign_order();
+
+    report();
+
+    // Free allocated memory
+    for (int b = 0; b < TABLE_SIZE; b++) {
+        Order *p = table[b];
+
+        while (p != NULL) {
+            Order *next = p->next;
+            free(p);
+            p = next;
+        }
+    }
+
+    return 0;
+}
