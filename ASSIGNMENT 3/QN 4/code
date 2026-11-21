@@ -1,0 +1,205 @@
+#include <stdio.h>
+
+#include <stdlib.h>
+
+ 
+
+typedef enum { RED, BLACK } Color;
+
+ 
+
+typedef struct Node {
+
+    int key;
+
+    Color color;
+
+    struct Node *left, *right, *parent;
+
+} Node;
+
+ 
+
+Node *root = NULL;
+
+ 
+
+Node *newNode(int key) {
+
+    Node *n = (Node *)malloc(sizeof(Node));
+
+    if (!n) { printf("Memory allocation failed\n"); exit(1); }
+
+    n->key = key; n->color = RED;
+
+    n->left = n->right = n->parent = NULL;
+
+    return n;
+
+}
+
+ 
+
+void leftRotate(Node *x) {
+
+    Node *y = x->right;
+
+    x->right = y->left;
+
+    if (y->left) y->left->parent = x;
+
+    y->parent = x->parent;
+
+    if (!x->parent) root = y;
+
+    else if (x == x->parent->left) x->parent->left = y;
+
+    else x->parent->right = y;
+
+    y->left = x; x->parent = y;
+
+}
+
+ 
+
+void rightRotate(Node *y) {
+
+    Node *x = y->left;
+
+    y->left = x->right;
+
+    if (x->right) x->right->parent = y;
+
+    x->parent = y->parent;
+
+    if (!y->parent) root = x;
+
+    else if (y == y->parent->left) y->parent->left = x;
+
+    else y->parent->right = x;
+
+    x->right = y; y->parent = x;
+
+}
+
+ 
+
+void fixInsert(Node *z) {
+
+    while (z != root && z->parent->color == RED) {
+
+        Node *p = z->parent, *g = p->parent;
+
+        if (p == g->left) {
+
+            Node *u = g->right;
+
+            if (u && u->color == RED) {
+
+                p->color = BLACK; u->color = BLACK; g->color = RED; z = g;
+
+            } else {
+
+                if (z == p->right) { z = p; leftRotate(z); p = z->parent; g = p->parent; }
+
+                p->color = BLACK; g->color = RED; rightRotate(g);
+
+            }
+
+        } else {
+
+            Node *u = g->left;
+
+            if (u && u->color == RED) {
+
+                p->color = BLACK; u->color = BLACK; g->color = RED; z = g;
+
+            } else {
+
+                if (z == p->left) { z = p; rightRotate(z); p = z->parent; g = p->parent; }
+
+                p->color = BLACK; g->color = RED; leftRotate(g);
+
+            }
+
+        }
+
+    }
+
+    root->color = BLACK;
+
+}
+
+ 
+
+void insert(int key) {
+
+    Node *z = newNode(key), *y = NULL, *x = root;
+
+    while (x) {
+
+        y = x;
+
+        if (key < x->key) x = x->left;
+
+        else if (key > x->key) x = x->right;
+
+        else { free(z); return; }
+
+    }
+
+    z->parent = y;
+
+    if (!y) root = z;
+
+    else if (key < y->key) y->left = z;
+
+    else y->right = z;
+
+    fixInsert(z);
+
+}
+
+ 
+
+void inorder(Node *r) {
+
+    if (!r) return;
+
+    inorder(r->left);
+
+    printf("%d(%c) ", r->key, r->color == RED ? 'R' : 'B');
+
+    inorder(r->right);
+
+}
+
+void freeTree(Node *r) {
+
+    if (r) { freeTree(r->left); freeTree(r->right); free(r); }
+
+}
+
+ 
+
+int main(void) {
+
+    int a[] = {10, 20, 30, 15, 25, 5};
+
+    int n = sizeof(a) / sizeof(a[0]);
+
+    for (int i = 0; i < n; i++) insert(a[i]);
+
+ 
+
+    printf("Inorder (key and colour): ");
+
+    inorder(root);
+
+    printf("\\nRoot: %d(B)\\n", root->key);
+
+    freeTree(root);
+
+    return 0;
+
+}
