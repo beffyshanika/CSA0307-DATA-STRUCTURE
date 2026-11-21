@@ -1,0 +1,51 @@
+#include <stdio.h>
+
+#include <stdlib.h>
+
+ 
+
+#define T 2
+
+ 
+
+typedef struct BTreeNode {
+
+    int keys[2 * T - 1];
+
+    struct BTreeNode *child[2 * T];
+
+    int n, leaf;
+
+} BTreeNode;
+
+ 
+
+BTreeNode *createNode(int leaf) {
+
+    BTreeNode *x = (BTreeNode *)malloc(sizeof(BTreeNode));
+
+    if (!x) { printf("Memory allocation failed\n"); exit(1); }
+
+    x->leaf = leaf; x->n = 0;
+
+    for (int i = 0; i < 2 * T; i++) x->child[i] = NULL;
+
+    return x;
+
+}
+
+ 
+
+void traverse(BTreeNode *x) {
+
+    if (!x) return;
+
+    int i;
+
+    for (i = 0; i < x->n; i++) {
+
+        if (!x->leaf) traverse(x->child[i]);
+
+        printf("%d ", x->keys[i]);
+
+    }
